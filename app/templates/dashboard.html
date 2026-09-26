@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Job Tracker</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+  <header>
+    <h1>📋 Job Tracker</h1>
+  </header>
+
+  <section id="kpis" class="kpis"></section>
+
+  <section class="charts">
+    <div class="chart-box"><canvas id="chartWeekly"></canvas></div>
+    <div class="chart-box"><canvas id="chartFunnel"></canvas></div>
+    <div class="chart-box"><canvas id="chartByType"></canvas></div>
+  </section>
+
+  <section class="new-app">
+    <h2>+ Nueva candidatura</h2>
+    <form id="formApp">
+      <input name="company" placeholder="Empresa" required />
+      <input name="position" placeholder="Puesto" required />
+      <input name="url" placeholder="URL oferta" />
+      <select name="source" required>
+        <option value="LinkedIn">LinkedIn</option>
+        <option value="Indeed">Indeed</option>
+        <option value="InfoJobs">InfoJobs</option>
+        <option value="Web empresa">Web empresa</option>
+        <option value="Otra">Otra</option>
+      </select>
+      <input type="date" name="found_date" required />
+      <input type="date" name="applied_date" />
+      <input name="location" placeholder="Ubicación" />
+      <select name="modality">
+        <option value="">Modalidad</option>
+        <option value="Remoto">Remoto</option>
+        <option value="Híbrido">Híbrido</option>
+        <option value="Presencial">Presencial</option>
+      </select>
+      <select name="job_type" required>
+        <option value="Python">Python</option>
+        <option value="Backend">Backend</option>
+        <option value="Data Analyst">Data Analyst</option>
+        <option value="Data Engineer">Data Engineer</option>
+        <option value="Otro">Otro</option>
+      </select>
+      <select name="cv_version">
+        <option value="">CV usado</option>
+        <option value="Backend">Backend</option>
+        <option value="Data">Data</option>
+        <option value="Data Engineer">Data Engineer</option>
+        <option value="Otro">Otro</option>
+      </select>
+      <select name="status">
+        <option value="Guardada">Guardada</option>
+        <option value="Candidatura enviada">Candidatura enviada</option>
+        <option value="CV visto">CV visto</option>
+        <option value="Entrevista">Entrevista</option>
+        <option value="Prueba técnica">Prueba técnica</option>
+        <option value="Oferta">Oferta</option>
+        <option value="Rechazada">Rechazada</option>
+      </select>
+      <textarea name="notes" placeholder="Notas"></textarea>
+      <button type="submit">Guardar</button>
+    </form>
+    <p id="formMsg"></p>
+  </section>
+
+  <section class="table-section">
+    <h2>Candidaturas</h2>
+    <div class="filters">
+      <input id="fCompany" placeholder="Filtrar por empresa" />
+      <select id="fStatus">
+        <option value="">Todos los estados</option>
+        <option value="Guardada">Guardada</option>
+        <option value="Candidatura enviada">Candidatura enviada</option>
+        <option value="CV visto">CV visto</option>
+        <option value="Entrevista">Entrevista</option>
+        <option value="Prueba técnica">Prueba técnica</option>
+        <option value="Oferta">Oferta</option>
+        <option value="Rechazada">Rechazada</option>
+        <option value="Sin respuesta">Sin respuesta</option>
+      </select>
+      <button id="fBtn">Filtrar</button>
+    </div>
+    <table id="table">
+      <thead>
+        <tr><th>Empresa</th><th>Puesto</th><th>Estado</th><th>CV</th><th>Última act.</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>
