@@ -81,6 +81,9 @@ document.getElementById("formApp").addEventListener("submit", async (e) => {
   e.preventDefault();
   const body = Object.fromEntries(new FormData(e.target).entries());
   Object.keys(body).forEach((k) => body[k] === "" && delete body[k]);
+  body.found_date = body.fecha;
+  body.applied_date = body.fecha;
+  delete body.fecha;
   const res = await fetch("/applications", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -90,6 +93,7 @@ document.getElementById("formApp").addEventListener("submit", async (e) => {
   if (res.ok) {
     msg.textContent = "✅ Guardada";
     e.target.reset();
+    document.getElementById("fecha").valueAsDate = new Date();
     refrescarTodo();
   } else {
     msg.textContent = "❌ " + JSON.stringify((await res.json()).detail);
@@ -103,4 +107,5 @@ document.getElementById("fBtn").addEventListener("click", () => {
   });
 });
 
+document.getElementById("fecha").valueAsDate = new Date();
 refrescarTodo();
