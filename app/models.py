@@ -21,7 +21,7 @@ class Application(Base):
     id = Column(Integer, primary_key=True, index=True)
     company = Column(String(200), nullable=False, index=True)
     position = Column(String(200), nullable=False)
-    url = Column(String(500), nullable=True)
+    url = Column(Text, nullable=True)
     source = Column(String(50), nullable=False)
     found_date = Column(Date, nullable=False)
     applied_date = Column(Date, nullable=True)
