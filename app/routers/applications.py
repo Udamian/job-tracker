@@ -1,7 +1,9 @@
+import csv
+import io
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 from sqlalchemy.orm import Session
 
 from .. import crud, schemas
@@ -87,6 +89,57 @@ def exportar_txt(
     return PlainTextResponse(
         content=contenido,
         headers={"Content-Disposition": 'attachment; filename="candidaturas.txt"'},
+    )
+
+
+@router.get("/export/csv")
+def exportar_csv(
+    company: Optional[str] = None,
+    job_type: Optional[schemas.TipoPuesto] = None,
+    modality: Optional[schemas.Modalidad] = None,
+    status: Optional[schemas.Estado] = None,
+    cv_version: Optional[schemas.VersionCV] = None,
+    db: Session = Depends(get_db),
+):
+    apps = crud.list_applications(
+        db,
+        company=company,
+        job_type=job_type.value if job_type else None,
+        modality=modality.value if modality else None,
+        status=status.value if status else None,
+        cv_version=cv_version.value if cv_version else None,
+        skip=0,
+        limit=5000,
+    )
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "ID", "Empresa", "Puesto", "Estado", "Tipo de puesto", "CV usado",
+        "Fuente", "Modalidad", "Ubicación", "Fecha encontrada", "Fecha candidatura",
+        "Fecha respuesta", "URL", "Notas", "Última actualización"
+    ])
+    for a in apps:
+        writer.writerow([
+            a.id,
+            a.company,
+            a.position,
+            a.status,
+            a.job_type,
+            a.cv_version or "",
+            a.source,
+            a.modality or "",
+            a.location or "",
+            a.found_date.isoformat() if a.found_date else "",
+            a.applied_date.isoformat() if a.applied_date else "",
+            a.response_date.isoformat() if a.response_date else "",
+            a.url or "",
+            a.notes or "",
+            a.last_update.strftime("%Y-%m-%d %H:%M:%S") if a.last_update else "",
+        ])
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="candidaturas.csv"'},
     )
 
 

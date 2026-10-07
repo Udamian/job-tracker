@@ -50,3 +50,14 @@ def test_respuestas_por_tipo_y_cv(client):
     res = client.get("/stats/by-type").json()
     assert len(res) == 1
     assert res[0]["tasa_respuesta"] == 100.0
+
+
+def test_respuestas_por_tipo_y_cv_general(client):
+    crear(client, applied_date="2026-09-02", status="Entrevista", job_type="Python", cv_version="CV General")
+    crear(client, applied_date="2026-09-02", status="Candidatura enviada", job_type="Python", cv_version="Data Engineer")
+    res = client.get("/stats/by-type").json()
+    assert len(res) == 1
+    assert res[0]["cv_version"] == "CV General"
+    assert res[0]["candidaturas"] == 2
+    assert res[0]["respuestas"] == 1
+    assert res[0]["tasa_respuesta"] == 50.0

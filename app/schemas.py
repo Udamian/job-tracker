@@ -30,8 +30,18 @@ class TipoPuesto(str, Enum):
 class VersionCV(str, Enum):
     BACKEND = "Backend"
     DATA = "Data"
-    DATA_ENGINEER = "Data Engineer"
+    CV_GENERAL = "CV General"
     OTRO = "Otro"
+
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            val_clean = value.strip().lower()
+            if val_clean in ("data engineer", "data_engineer"):
+                return cls.CV_GENERAL
+            if val_clean in ("cv general", "cv_general", "general"):
+                return cls.CV_GENERAL
+        return None
 
 
 class Estado(str, Enum):
@@ -63,6 +73,8 @@ RANGO_ESTADO = {
 
 
 class ApplicationBase(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     company: str
     position: str
     url: Optional[str] = None
@@ -76,6 +88,14 @@ class ApplicationBase(BaseModel):
     status: Estado = Estado.CANDIDATURA_ENVIADA
     response_date: Optional[date] = None
     notes: Optional[str] = None
+
+    @field_validator("url", "location", "notes", mode="before")
+    @classmethod
+    def sanitize_optional_strings(cls, v):
+        if isinstance(v, str):
+            cleaned = v.strip()
+            return cleaned if cleaned else None
+        return v
 
     @field_validator("status")
     @classmethod
@@ -106,6 +126,7 @@ class ApplicationUpdate(BaseModel):
     """Todos los campos opcionales: es un PATCH parcial.
     La coherencia final se revalida en crud.update_application,
     fusionando esto con el registro existente."""
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     company: Optional[str] = None
     position: Optional[str] = None
@@ -121,6 +142,14 @@ class ApplicationUpdate(BaseModel):
     response_date: Optional[date] = None
     notes: Optional[str] = None
 
+    @field_validator("url", "location", "notes", mode="before")
+    @classmethod
+    def sanitize_optional_strings(cls, v):
+        if isinstance(v, str):
+            cleaned = v.strip()
+            return cleaned if cleaned else None
+        return v
+
     @field_validator("status")
     @classmethod
     def status_no_manual_sin_respuesta(cls, v: Optional[Estado]) -> Optional[Estado]:
@@ -130,7 +159,7 @@ class ApplicationUpdate(BaseModel):
 
 
 class ApplicationOut(ApplicationBase):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
 
     id: int
     max_stage_reached: int

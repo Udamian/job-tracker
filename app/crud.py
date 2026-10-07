@@ -88,7 +88,10 @@ def list_applications(
     if status:
         query = query.filter(models.Application.status == status)
     if cv_version:
-        query = query.filter(models.Application.cv_version == cv_version)
+        if cv_version == schemas.VersionCV.CV_GENERAL.value:
+            query = query.filter(models.Application.cv_version.in_(["CV General", "Data Engineer"]))
+        else:
+            query = query.filter(models.Application.cv_version == cv_version)
     return query.order_by(models.Application.last_update.desc()).offset(skip).limit(limit).all()
 
 

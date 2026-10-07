@@ -3,113 +3,232 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Job Tracker</title>
-  <link rel="stylesheet" href="/static/styles.css" />
+  <title>Job Tracker — Seguimiento de Empleo</title>
+  <meta name="theme-color" content="#0b0f19" />
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+  <link rel="icon" type="image/svg+xml" href="/static/icon.svg" />
+  <link rel="apple-touch-icon" href="/static/icon-192.png" />
+  <link rel="manifest" href="/static/site.webmanifest" />
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/static/styles.css?v=4" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
-  <header>
-    <h1>📋 Job Tracker</h1>
-  </header>
+  <div class="app-layout">
+    <!-- Header principal -->
+    <header class="app-header">
+      <div class="brand">
+        <img src="/static/icon.svg" alt="Job Tracker Icon" class="header-logo" width="36" height="36" />
+        <div>
+          <h1>Job Tracker</h1>
+          <p class="tagline">Seguimiento inteligente de ofertas y candidaturas</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <span class="status-indicator">
+          <span class="status-ping"></span>
+          <span class="status-dot"></span>
+          Sistema activo
+        </span>
+      </div>
+    </header>
 
-  <section id="kpis" class="kpis"></section>
+    <!-- Resumen de KPIs -->
+    <section id="kpis" class="kpis" aria-label="Métricas clave"></section>
 
-  <section class="charts">
-    <div class="chart-box"><canvas id="chartWeekly"></canvas></div>
-    <div class="chart-box"><canvas id="chartFunnel"></canvas></div>
-    <div class="chart-box"><canvas id="chartByType"></canvas></div>
-  </section>
+    <!-- Gráficos interactivos -->
+    <section class="charts" aria-label="Visualización de datos">
+      <div class="chart-box">
+        <div class="chart-header">
+          <h3>📅 Ritmo de postulaciones</h3>
+          <span class="chart-subtitle">Candidaturas por semana</span>
+        </div>
+        <div class="canvas-wrapper"><canvas id="chartWeekly"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-header">
+          <h3>🌪️ Embudo de selección</h3>
+          <span class="chart-subtitle">Fase máxima alcanzada</span>
+        </div>
+        <div class="canvas-wrapper"><canvas id="chartFunnel"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-header">
+          <h3>🎯 Eficacia por perfil y CV</h3>
+          <span class="chart-subtitle">Tasa de respuesta (%)</span>
+        </div>
+        <div class="canvas-wrapper"><canvas id="chartByType"></canvas></div>
+      </div>
+    </section>
 
-  <section class="new-app">
-    <h2>+ Nueva candidatura</h2>
-    <form id="formApp">
-      <input name="company" placeholder="Empresa" required />
-      <input name="position" placeholder="Puesto" required />
-      <input name="url" placeholder="URL oferta" />
-      <select name="source" required>
-        <option value="LinkedIn">LinkedIn</option>
-        <option value="Indeed">Indeed</option>
-        <option value="InfoJobs">InfoJobs</option>
-        <option value="Web empresa">Web empresa</option>
-        <option value="Otra">Otra</option>
-      </select>
-      <input type="date" name="fecha" id="fecha" required />
-      <input name="location" placeholder="Ubicación" />
-      <select name="modality">
-        <option value="">Modalidad</option>
-        <option value="Remoto">Remoto</option>
-        <option value="Híbrido">Híbrido</option>
-        <option value="Presencial">Presencial</option>
-      </select>
-      <select name="job_type" required>
-        <option value="Python">Python</option>
-        <option value="Backend">Backend</option>
-        <option value="Data Analyst">Data Analyst</option>
-        <option value="Data Engineer">Data Engineer</option>
-        <option value="Otro">Otro</option>
-      </select>
-      <select name="cv_version">
-        <option value="">CV usado</option>
-        <option value="Backend">Backend</option>
-        <option value="Data">Data</option>
-        <option value="Data Engineer">Data Engineer</option>
-        <option value="Otro">Otro</option>
-      </select>
-      <select name="status" id="formStatus">
-        <option value="Guardada">Guardada</option>
-        <option value="Candidatura enviada" selected>Candidatura enviada</option>
-        <option value="CV visto">CV visto</option>
-        <option value="Entrevista">Entrevista</option>
-        <option value="Prueba técnica">Prueba técnica</option>
-        <option value="Oferta">Oferta</option>
-        <option value="Rechazada">Rechazada</option>
-      </select>
-      <textarea name="notes" placeholder="Notas"></textarea>
-      <button type="submit">Guardar</button>
-    </form>
-    <p id="formMsg"></p>
-  </section>
+    <!-- Formulario para nueva candidatura -->
+    <section class="new-app card">
+      <div class="section-title-row">
+        <h2><span>➕</span> Nueva candidatura</h2>
+        <span class="section-badge">Registro rápido</span>
+      </div>
+      <form id="formApp">
+        <div class="form-group">
+          <label for="company">Empresa *</label>
+          <input id="company" name="company" placeholder="Ej. Stripe, Cabify..." required />
+        </div>
 
-  <section class="table-section">
-    <div class="table-header-row">
-      <h2>Candidaturas</h2>
-      <button id="btnExport" class="btn-export" title="Exportar todos los registros en formato texto plano">
-        📄 Exportar texto plano
-      </button>
-    </div>
-    <div class="filters">
-      <input id="fCompany" placeholder="Filtrar por empresa" />
-      <select id="fStatus">
-        <option value="">Todos los estados</option>
-        <option value="Guardada">Guardada</option>
-        <option value="Candidatura enviada">Candidatura enviada</option>
-        <option value="CV visto">CV visto</option>
-        <option value="Entrevista">Entrevista</option>
-        <option value="Prueba técnica">Prueba técnica</option>
-        <option value="Oferta">Oferta</option>
-        <option value="Rechazada">Rechazada</option>
-        <option value="Sin respuesta">Sin respuesta</option>
-      </select>
-      <button id="fBtn">Filtrar</button>
-    </div>
-    <div class="table-container">
-      <table id="table">
-        <thead>
-          <tr>
-            <th>Empresa</th>
-            <th>Puesto</th>
-            <th>Estado</th>
-            <th>CV</th>
-            <th>Última act.</th>
-            <th class="th-actions">Acción</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <p id="tableMsg" class="table-msg"></p>
-  </section>
+        <div class="form-group">
+          <label for="position">Puesto *</label>
+          <input id="position" name="position" placeholder="Ej. Data Engineer, Backend Python..." required />
+        </div>
 
-  <script src="/static/dashboard.js?v=3"></script>
+        <div class="form-group">
+          <label for="url">URL oferta</label>
+          <input id="url" name="url" placeholder="https://..." />
+        </div>
+
+        <div class="form-group">
+          <label for="source">Fuente *</label>
+          <select id="source" name="source" required>
+            <option value="LinkedIn">LinkedIn</option>
+            <option value="Indeed">Indeed</option>
+            <option value="InfoJobs">InfoJobs</option>
+            <option value="Web empresa">Web empresa</option>
+            <option value="Otra">Otra</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="fecha">Fecha *</label>
+          <input type="date" name="fecha" id="fecha" required />
+        </div>
+
+        <div class="form-group">
+          <label for="location">Ubicación</label>
+          <input id="location" name="location" placeholder="Ej. Madrid, Remoto..." />
+        </div>
+
+        <div class="form-group">
+          <label for="modality">Modalidad</label>
+          <select id="modality" name="modality">
+            <option value="">Modalidad</option>
+            <option value="Remoto">Remoto</option>
+            <option value="Híbrido">Híbrido</option>
+            <option value="Presencial">Presencial</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="job_type">Tipo de puesto *</label>
+          <select id="job_type" name="job_type" required>
+            <option value="Python">Python</option>
+            <option value="Backend">Backend</option>
+            <option value="Data Analyst">Data Analyst</option>
+            <option value="Data Engineer">Data Engineer</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="cv_version">Versión de CV</label>
+          <select id="cv_version" name="cv_version">
+            <option value="">CV usado</option>
+            <option value="CV General">CV General</option>
+            <option value="Backend">Backend</option>
+            <option value="Data">Data</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="formStatus">Estado inicial</label>
+          <select name="status" id="formStatus">
+            <option value="Guardada">Guardada</option>
+            <option value="Candidatura enviada" selected>Candidatura enviada</option>
+            <option value="CV visto">CV visto</option>
+            <option value="Entrevista">Entrevista</option>
+            <option value="Prueba técnica">Prueba técnica</option>
+            <option value="Oferta">Oferta</option>
+            <option value="Rechazada">Rechazada</option>
+          </select>
+        </div>
+
+        <div class="form-group full-width">
+          <label for="notes">Notas o comentarios</label>
+          <textarea id="notes" name="notes" placeholder="Rango salarial, detalles de contacto, impresiones..."></textarea>
+        </div>
+
+        <div class="form-actions full-width">
+          <button type="submit" class="btn-primary">
+            <span>💾</span> Guardar candidatura
+          </button>
+          <p id="formMsg" class="form-msg"></p>
+        </div>
+      </form>
+    </section>
+
+    <!-- Tabla y gestión de candidaturas -->
+    <section class="table-section card">
+      <div class="table-header-row">
+        <div class="table-title-group">
+          <h2>Candidaturas</h2>
+          <span id="tableCount" class="badge-count" title="Total candidaturas visibles">0</span>
+        </div>
+        <div class="export-actions">
+          <button id="btnExport" class="btn-action" title="Exportar todas las candidaturas en texto plano">
+            📄 Exportar TXT
+          </button>
+          <button id="btnExportCsv" class="btn-action btn-action-accent" title="Exportar todas las candidaturas en CSV (Excel/Sheets)">
+            📊 Exportar CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="filters-bar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input id="fCompany" placeholder="Buscar por empresa en tiempo real..." autocomplete="off" />
+        </div>
+
+        <div class="filter-select-wrapper">
+          <select id="fStatus" title="Filtrar por estado">
+            <option value="">Todos los estados</option>
+            <option value="Guardada">Guardada</option>
+            <option value="Candidatura enviada">Candidatura enviada</option>
+            <option value="CV visto">CV visto</option>
+            <option value="Entrevista">Entrevista</option>
+            <option value="Prueba técnica">Prueba técnica</option>
+            <option value="Oferta">Oferta</option>
+            <option value="Rechazada">Rechazada</option>
+            <option value="Sin respuesta">Sin respuesta</option>
+          </select>
+        </div>
+
+        <button id="fClearBtn" class="btn-clear hidden" title="Restablecer filtros">
+          ✕ Limpiar
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table id="table">
+          <thead>
+            <tr>
+              <th>Empresa</th>
+              <th>Puesto y Modalidad</th>
+              <th>Estado</th>
+              <th>CV usado</th>
+              <th>Última act.</th>
+              <th class="th-actions">Acción</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p id="tableMsg" class="table-msg"></p>
+    </section>
+  </div>
+
+  <script src="/static/dashboard.js?v=4"></script>
 </body>
 </html>

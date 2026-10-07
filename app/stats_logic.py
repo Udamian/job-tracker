@@ -19,7 +19,10 @@ def _dataframe(db: Session) -> pd.DataFrame:
     refresh_stale_applications(db)
     rows = db.query(models.Application).all()
     data = [{c: getattr(r, c) for c in COLUMNAS} for r in rows]
-    return pd.DataFrame(data, columns=COLUMNAS)
+    df = pd.DataFrame(data, columns=COLUMNAS)
+    if not df.empty:
+        df["cv_version"] = df["cv_version"].replace({"Data Engineer": "CV General"})
+    return df
 
 
 def _es_candidatura(df: pd.DataFrame) -> pd.Series:
