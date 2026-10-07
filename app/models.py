@@ -29,7 +29,7 @@ class Application(Base):
     modality = Column(String(50), nullable=True)
     job_type = Column(String(50), nullable=False, index=True)
     cv_version = Column(String(50), nullable=True, index=True)
-    status = Column(String(50), nullable=False, default="Guardada", index=True)
+    status = Column(String(50), nullable=False, default="Candidatura enviada", index=True)
     max_stage_reached = Column(Integer, nullable=False, default=0)
     last_update = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     response_date = Column(Date, nullable=True)

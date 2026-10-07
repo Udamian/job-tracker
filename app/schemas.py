@@ -73,7 +73,7 @@ class ApplicationBase(BaseModel):
     modality: Optional[Modalidad] = None
     job_type: TipoPuesto
     cv_version: Optional[VersionCV] = None
-    status: Estado = Estado.GUARDADA
+    status: Estado = Estado.CANDIDATURA_ENVIADA
     response_date: Optional[date] = None
     notes: Optional[str] = None
 

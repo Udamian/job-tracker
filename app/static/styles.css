@@ -46,6 +46,98 @@ input, select, textarea, button {
 }
 button { background: var(--accent); color: #0f172a; font-weight: 600; cursor: pointer; border: none; }
 table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-th, td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #334155; }
-.filters { display: flex; gap: 0.5rem; }
-#formMsg { color: var(--muted); }
+th, td { padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid #334155; vertical-align: middle; }
+tbody tr:hover { background-color: rgba(51, 65, 85, 0.35); }
+.filters { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+#formMsg { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; }
+
+.table-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.table-header-row h2 { margin: 0; }
+
+.btn-export {
+  background: #1e293b;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+.btn-export:hover {
+  background: var(--accent);
+  color: #0f172a;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.status-select {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: var(--text);
+  cursor: pointer;
+  width: 100%;
+  max-width: 170px;
+}
+.status-select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.th-actions, .td-actions {
+  text-align: center;
+  width: 70px;
+}
+
+.btn-delete {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 0.35rem 0.55rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+.btn-delete:hover {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+  transform: scale(1.05);
+}
+
+.sub-cell {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.link-job {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.link-job:hover {
+  text-decoration: underline;
+}
+
+.table-msg {
+  font-size: 0.9rem;
+  min-height: 1.2rem;
+  margin-top: 0.75rem;
+  color: #4ade80;
+}
+.table-msg.error {
+  color: #f87171;
+}
+

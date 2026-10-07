@@ -99,6 +99,9 @@ def update_application(db: Session, application_id: int, data: schemas.Applicati
     updates = data.model_dump(exclude_unset=True)
     merged.update(updates)
 
+    if merged.get("status") != schemas.Estado.GUARDADA.value and not merged.get("applied_date"):
+        merged["applied_date"] = merged.get("found_date") or date.today()
+
     try:
         validado = schemas.ApplicationBase(**merged)
     except ValidationError as exc:

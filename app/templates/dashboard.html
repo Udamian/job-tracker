@@ -55,9 +55,9 @@
         <option value="Data Engineer">Data Engineer</option>
         <option value="Otro">Otro</option>
       </select>
-      <select name="status">
+      <select name="status" id="formStatus">
         <option value="Guardada">Guardada</option>
-        <option value="Candidatura enviada">Candidatura enviada</option>
+        <option value="Candidatura enviada" selected>Candidatura enviada</option>
         <option value="CV visto">CV visto</option>
         <option value="Entrevista">Entrevista</option>
         <option value="Prueba técnica">Prueba técnica</option>
@@ -71,7 +71,12 @@
   </section>
 
   <section class="table-section">
-    <h2>Candidaturas</h2>
+    <div class="table-header-row">
+      <h2>Candidaturas</h2>
+      <button id="btnExport" class="btn-export" title="Exportar todos los registros en formato texto plano">
+        📄 Exportar texto plano
+      </button>
+    </div>
     <div class="filters">
       <input id="fCompany" placeholder="Filtrar por empresa" />
       <select id="fStatus">
@@ -87,14 +92,24 @@
       </select>
       <button id="fBtn">Filtrar</button>
     </div>
-    <table id="table">
-      <thead>
-        <tr><th>Empresa</th><th>Puesto</th><th>Estado</th><th>CV</th><th>Última act.</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div class="table-container">
+      <table id="table">
+        <thead>
+          <tr>
+            <th>Empresa</th>
+            <th>Puesto</th>
+            <th>Estado</th>
+            <th>CV</th>
+            <th>Última act.</th>
+            <th class="th-actions">Acción</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p id="tableMsg" class="table-msg"></p>
   </section>
 
-  <script src="/static/dashboard.js?v=2"></script>
+  <script src="/static/dashboard.js?v=3"></script>
 </body>
 </html>
