@@ -1,28 +1,49 @@
+from typing import Callable, Optional
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
 
-from .database import Base, engine
+from .database import Base, engine, ensure_sqlite_columns
+from .paths import resource
 from .routers import applications, stats
 
-# MVP: sin Alembic todavía. Al arrancar, crea las tablas que falten.
-# Cuando el modelo de datos se estabilice, merece la pena migrar a
-# Alembic para no perder datos al cambiar columnas.
+# MVP: sin Alembic. Al arrancar se crean las tablas que falten y se
+# añaden columnas nuevas a bases SQLite antiguas.
 Base.metadata.create_all(bind=engine)
+ensure_sqlite_columns()
 
-# Migrar automáticamente registros antiguos de cv_version 'Data Engineer' a 'CV General'
+# Normaliza valores heredados de versiones anteriores.
+ESTADOS_LEGADOS = {
+    "Guardada": "Enviada",
+    "Candidatura enviada": "Enviada",
+    "Sin respuesta": "Enviada",
+    "CV visto": "Contactado",
+    "Prueba técnica": "Entrevista",
+    "Oferta": "Entrevista",
+}
+
 try:
     with engine.begin() as conn:
         conn.execute(
             text("UPDATE applications SET cv_version = 'CV General' WHERE cv_version = 'Data Engineer'")
         )
+        conn.execute(
+            text("UPDATE applications SET cv_version = 'Java Junior' WHERE LOWER(cv_version) = 'java junior'")
+        )
+        for viejo, nuevo in ESTADOS_LEGADOS.items():
+            conn.execute(
+                text("UPDATE applications SET status = :nuevo WHERE LOWER(status) = LOWER(:viejo)"),
+                {"nuevo": nuevo, "viejo": viejo},
+            )
 except Exception:
+    # En una base recién creada no hay nada que normalizar.
     pass
 
-app = FastAPI(title="Job Tracker API", version="0.1.0")
+app = FastAPI(title="Job Tracker API", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,23 +55,50 @@ app.add_middleware(
 app.include_router(applications.router)
 app.include_router(stats.router)
 
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-templates = Jinja2Templates(directory="app/templates")
+STATIC_DIR = resource("app", "static")
+TEMPLATES_DIR = resource("app", "templates")
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+# El lanzador de escritorio registra aquí cómo enfocar la ventana nativa.
+_focus_handler: Optional[Callable[[], None]] = None
+
+
+def set_focus_handler(handler: Optional[Callable[[], None]]) -> None:
+    global _focus_handler
+    _focus_handler = handler
+
+
+@app.post("/focus", include_in_schema=False)
+def focus():
+    """Segunda instancia: enfoca la ventana que ya está abierta."""
+    if _focus_handler is not None:
+        try:
+            _focus_handler()
+        except Exception:
+            pass
+    return {"ok": True}
 
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    return FileResponse("app/static/favicon.ico")
+    return FileResponse(STATIC_DIR / "favicon.ico")
 
 
 @app.get("/site.webmanifest", include_in_schema=False)
 def manifest():
-    return FileResponse("app/static/site.webmanifest")
+    return FileResponse(STATIC_DIR / "site.webmanifest")
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "version": app.version}
+
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(url="/dashboard")
 
 
 @app.get("/dashboard")

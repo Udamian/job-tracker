@@ -1,0 +1,24 @@
+name: job-tracker
+
+# Servicio legado: solo se usa para pg_dump y la migración a SQLite.
+services:
+  db:
+    image: postgres:16
+    restart: "no"
+    environment:
+      POSTGRES_USER: jobtracker
+      POSTGRES_PASSWORD: jobtracker
+      POSTGRES_DB: jobtracker
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U jobtracker -d jobtracker" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+    name: job-tracker_pgdata

@@ -25,7 +25,7 @@ def listar(
     status: Optional[schemas.Estado] = None,
     cv_version: Optional[schemas.VersionCV] = None,
     skip: int = 0,
-    limit: int = Query(default=100, le=500),
+    limit: int = Query(default=500, le=1000),
     db: Session = Depends(get_db),
 ):
     return crud.list_applications(
@@ -38,6 +38,29 @@ def listar(
         skip=skip,
         limit=limit,
     )
+
+
+@router.get("/suggestions", response_model=schemas.Suggestions)
+def sugerencias(q: str = "", db: Session = Depends(get_db)):
+    """Empresas y puestos ya usados, para el autocompletado de la barra."""
+    return crud.suggestions(db, q=q)
+
+
+@router.get("/check", response_model=schemas.DuplicateCheck)
+def comprobar_duplicado(
+    company: str = Query(min_length=1),
+    position: Optional[str] = None,
+    exclude_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """Avisa si ya hay una candidatura en esa empresa."""
+    return crud.check_duplicates(db, company=company, position=position, exclude_id=exclude_id)
+
+
+@router.get("/attention", response_model=list[schemas.AttentionOut])
+def requiere_atencion(db: Session = Depends(get_db)):
+    """Candidaturas en espera desde hace más de 21 días."""
+    return crud.attention_applications(db)
 
 
 @router.get("/export/txt")
@@ -67,24 +90,28 @@ def exportar_txt(
         "",
     ]
     for idx, a in enumerate(apps, start=1):
-        lineas.extend([
-            f"[{idx}] {a.company.strip()} — {a.position.strip()}",
-            "-" * 80,
-            f"  ID:                    {a.id}",
-            f"  Estado:                {a.status}",
-            f"  Fecha encontrada:      {a.found_date}",
-            f"  Fecha candidatura:     {a.applied_date or '-'}",
-            f"  Fuente:                {a.source}",
-            f"  Modalidad:             {a.modality or '-'}",
-            f"  Ubicación:             {a.location or '-'}",
-            f"  Tipo de puesto:        {a.job_type}",
-            f"  Versión de CV:         {a.cv_version or '-'}",
-            f"  URL oferta:            {a.url or '-'}",
-            f"  Fecha respuesta:       {a.response_date or '-'}",
-            f"  Notas:                 {a.notes or '-'}",
-            f"  Última actualización:  {a.last_update.strftime('%Y-%m-%d %H:%M:%S') if a.last_update else '-'}",
-            "",
-        ])
+        lineas.extend(
+            [
+                f"[{idx}] {a.company.strip()} — {a.position.strip()}",
+                "-" * 80,
+                f"  ID:                    {a.id}",
+                f"  Estado:                {a.status}",
+                f"  Etapa máxima:          {a.max_stage_reached}",
+                f"  Fecha encontrada:      {a.found_date or '-'}",
+                f"  Fecha candidatura:     {a.applied_date or '-'}",
+                f"  Fuente:                {a.source or '-'}",
+                f"  Modalidad:             {a.modality or '-'}",
+                f"  Ubicación:             {a.location or '-'}",
+                f"  Tipo de puesto:        {a.job_type or '-'}",
+                f"  Versión de CV:         {a.cv_version or '-'}",
+                f"  URL oferta:            {a.url or '-'}",
+                f"  Seguimiento:           {a.follow_up_date or '-'}",
+                f"  Fecha respuesta:       {a.response_date or '-'}",
+                f"  Notas:                 {a.notes or '-'}",
+                f"  Última actualización:  {a.last_update.strftime('%Y-%m-%d %H:%M:%S') if a.last_update else '-'}",
+                "",
+            ]
+        )
     contenido = "\n".join(lineas)
     return PlainTextResponse(
         content=contenido,
@@ -113,34 +140,60 @@ def exportar_csv(
     )
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        "ID", "Empresa", "Puesto", "Estado", "Tipo de puesto", "CV usado",
-        "Fuente", "Modalidad", "Ubicación", "Fecha encontrada", "Fecha candidatura",
-        "Fecha respuesta", "URL", "Notas", "Última actualización"
-    ])
+    writer.writerow(
+        [
+            "ID",
+            "Empresa",
+            "Puesto",
+            "Estado",
+            "Tipo de puesto",
+            "CV usado",
+            "Fuente",
+            "Modalidad",
+            "Ubicación",
+            "Fecha encontrada",
+            "Fecha candidatura",
+            "Fecha respuesta",
+            "URL",
+            "Notas",
+            "Última actualización",
+            "Etapa máxima",
+            "Fecha seguimiento",
+        ]
+    )
     for a in apps:
-        writer.writerow([
-            a.id,
-            a.company,
-            a.position,
-            a.status,
-            a.job_type,
-            a.cv_version or "",
-            a.source,
-            a.modality or "",
-            a.location or "",
-            a.found_date.isoformat() if a.found_date else "",
-            a.applied_date.isoformat() if a.applied_date else "",
-            a.response_date.isoformat() if a.response_date else "",
-            a.url or "",
-            a.notes or "",
-            a.last_update.strftime("%Y-%m-%d %H:%M:%S") if a.last_update else "",
-        ])
+        writer.writerow(
+            [
+                a.id,
+                a.company,
+                a.position,
+                a.status,
+                a.job_type or "",
+                a.cv_version or "",
+                a.source or "",
+                a.modality or "",
+                a.location or "",
+                a.found_date.isoformat() if a.found_date else "",
+                a.applied_date.isoformat() if a.applied_date else "",
+                a.response_date.isoformat() if a.response_date else "",
+                a.url or "",
+                a.notes or "",
+                a.last_update.strftime("%Y-%m-%d %H:%M:%S") if a.last_update else "",
+                a.max_stage_reached,
+                a.follow_up_date.isoformat() if a.follow_up_date else "",
+            ]
+        )
     return Response(
         content=output.getvalue(),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="candidaturas.csv"'},
     )
+
+
+@router.post("/restore", response_model=schemas.ApplicationOut, status_code=201)
+def restaurar(data: schemas.ApplicationRestore, db: Session = Depends(get_db)):
+    """Deshacer un borrado conservando id, fechas y etapa máxima."""
+    return crud.restore_application(db, data)
 
 
 @router.get("/{application_id}", response_model=schemas.ApplicationOut)
@@ -149,10 +202,15 @@ def obtener(application_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{application_id}", response_model=schemas.ApplicationOut)
-def actualizar(application_id: int, data: schemas.ApplicationUpdate, db: Session = Depends(get_db)):
+def actualizar(
+    application_id: int,
+    data: schemas.ApplicationUpdate,
+    db: Session = Depends(get_db),
+):
     return crud.update_application(db, application_id, data)
 
 
-@router.delete("/{application_id}", status_code=204)
+@router.delete("/{application_id}", response_model=schemas.ApplicationOut)
 def eliminar(application_id: int, db: Session = Depends(get_db)):
-    crud.delete_application(db, application_id)
+    """Devuelve la candidatura borrada para que el frontend pueda deshacer."""
+    return crud.delete_application(db, application_id)

@@ -1,11 +1,31 @@
+import unicodedata
 from datetime import date, datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
-class Fuente(str, Enum):
+def normalizar(texto: str) -> str:
+    """Minúsculas, sin tildes y con espacios colapsados. Para comparar."""
+    sin_tildes = "".join(
+        c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn"
+    )
+    return " ".join(sin_tildes.strip().lower().split())
+
+
+class _EnumNormalizado(str, Enum):
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            buscado = normalizar(value)
+            for miembro in cls:
+                if normalizar(miembro.value) == buscado:
+                    return miembro
+        return None
+
+
+class Fuente(_EnumNormalizado):
     LINKEDIN = "LinkedIn"
     INDEED = "Indeed"
     INFOJOBS = "InfoJobs"
@@ -13,13 +33,13 @@ class Fuente(str, Enum):
     OTRA = "Otra"
 
 
-class Modalidad(str, Enum):
+class Modalidad(_EnumNormalizado):
     REMOTO = "Remoto"
     HIBRIDO = "Híbrido"
     PRESENCIAL = "Presencial"
 
 
-class TipoPuesto(str, Enum):
+class TipoPuesto(_EnumNormalizado):
     PYTHON = "Python"
     BACKEND = "Backend"
     DATA_ANALYST = "Data Analyst"
@@ -27,109 +47,154 @@ class TipoPuesto(str, Enum):
     OTRO = "Otro"
 
 
-class VersionCV(str, Enum):
+class VersionCV(_EnumNormalizado):
     BACKEND = "Backend"
     DATA = "Data"
     CV_GENERAL = "CV General"
+    JAVA_JUNIOR = "Java Junior"
     OTRO = "Otro"
 
     @classmethod
     def _missing_(cls, value):
         if isinstance(value, str):
-            val_clean = value.strip().lower()
+            val_clean = normalizar(value)
             if val_clean in ("data engineer", "data_engineer"):
                 return cls.CV_GENERAL
             if val_clean in ("cv general", "cv_general", "general"):
                 return cls.CV_GENERAL
+            if val_clean in ("java junior", "java_junior", "javajunior", "java jr", "java_jr"):
+                return cls.JAVA_JUNIOR
+        return super()._missing_(value)
+
+
+class Estado(_EnumNormalizado):
+    """Los cuatro estados del tablero.
+
+    Los valores antiguos (Guardada, Candidatura enviada, CV visto,
+    Prueba técnica, Oferta, Sin respuesta) se siguen aceptando y se
+    normalizan a uno de estos cuatro. "Sin respuesta" ya no es un estado:
+    esas candidaturas quedan en Enviada y aparecen en el panel de
+    Estancados cuando pasan 21 días sin novedades.
+    """
+
+    ENVIADA = "Enviada"
+    CONTACTADO = "Contactado"
+    ENTREVISTA = "Entrevista"
+    RECHAZADA = "Rechazada"
+
+    @classmethod
+    def _missing_(cls, value):
+        encontrado = super()._missing_(value)
+        if encontrado is not None:
+            return encontrado
+        if isinstance(value, str):
+            alias = {
+                # Valores nuevos y sinónimos.
+                "enviado": cls.ENVIADA,
+                "aplicada": cls.ENVIADA,
+                "aplicado": cls.ENVIADA,
+                "contacto": cls.CONTACTADO,
+                "contactada": cls.CONTACTADO,
+                "rechazo": cls.RECHAZADA,
+                "rechazado": cls.RECHAZADA,
+                # Valores heredados de la versión anterior.
+                "guardada": cls.ENVIADA,
+                "candidatura enviada": cls.ENVIADA,
+                "cv visto": cls.CONTACTADO,
+                "cv": cls.CONTACTADO,
+                "cv-visto": cls.CONTACTADO,
+                "prueba": cls.ENTREVISTA,
+                "prueba tecnica": cls.ENTREVISTA,
+                "tecnica": cls.ENTREVISTA,
+                "oferta": cls.ENTREVISTA,
+                "sin respuesta": cls.ENVIADA,
+                "sin-respuesta": cls.ENVIADA,
+                "ghosting": cls.ENVIADA,
+                "ghosted": cls.ENVIADA,
+            }
+            return alias.get(normalizar(value))
         return None
 
 
-class Estado(str, Enum):
-    GUARDADA = "Guardada"
-    CANDIDATURA_ENVIADA = "Candidatura enviada"
-    CV_VISTO = "CV visto"
-    ENTREVISTA = "Entrevista"
-    PRUEBA_TECNICA = "Prueba técnica"
-    OFERTA = "Oferta"
-    RECHAZADA = "Rechazada"
-    SIN_RESPUESTA = "Sin respuesta"  # lo asigna el sistema, ver crud.refresh_stale_applications
+# Todos los estados se pueden fijar a mano. El antiguo "Sin respuesta"
+# automático se sustituye por el panel "Estancados", que propone la
+# acción y deja decidir al usuario.
+ESTADOS_EDITABLES_MANUALMENTE = set(Estado)
 
-
-# El usuario nunca fija "Sin respuesta" a mano: lo calcula el sistema
-# a partir de los días transcurridos (ver crud.py).
-ESTADOS_EDITABLES_MANUALMENTE = {e for e in Estado if e != Estado.SIN_RESPUESTA}
-
-# Orden del embudo. Rechazada/Sin respuesta son "salidas" del embudo,
-# no tienen rango propio: no hacen avanzar max_stage_reached pero
-# tampoco lo hacen retroceder.
+# Orden del embudo. Rechazada es una salida: no hace avanzar
+# max_stage_reached pero tampoco lo hace retroceder.
 RANGO_ESTADO = {
-    Estado.GUARDADA: 0,
-    Estado.CANDIDATURA_ENVIADA: 1,
-    Estado.CV_VISTO: 2,
+    Estado.ENVIADA: 1,
+    Estado.CONTACTADO: 2,
     Estado.ENTREVISTA: 3,
-    Estado.PRUEBA_TECNICA: 4,
-    Estado.OFERTA: 5,
 }
 
 
 class ApplicationBase(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    company: str
-    position: str
+    company: str = Field(min_length=1, max_length=200)
+    position: str = Field(min_length=1, max_length=200)
     url: Optional[str] = None
-    source: Fuente
-    found_date: date
+    source: Optional[Fuente] = None
+    found_date: Optional[date] = None
     applied_date: Optional[date] = None
     location: Optional[str] = None
     modality: Optional[Modalidad] = None
-    job_type: TipoPuesto
+    job_type: Optional[TipoPuesto] = None
     cv_version: Optional[VersionCV] = None
-    status: Estado = Estado.CANDIDATURA_ENVIADA
+    status: Estado = Estado.ENVIADA
+    follow_up_date: Optional[date] = None
     response_date: Optional[date] = None
     notes: Optional[str] = None
 
     @field_validator("url", "location", "notes", mode="before")
     @classmethod
-    def sanitize_optional_strings(cls, v):
+    def sanitizar_textos_opcionales(cls, v):
         if isinstance(v, str):
-            cleaned = v.strip()
-            return cleaned if cleaned else None
+            limpio = v.strip()
+            return limpio or None
         return v
 
-    @field_validator("status")
+    @field_validator("source", "modality", "job_type", "cv_version", mode="before")
     @classmethod
-    def status_no_manual_sin_respuesta(cls, v: Estado) -> Estado:
-        if v not in ESTADOS_EDITABLES_MANUALMENTE:
-            raise ValueError(
-                "El estado 'Sin respuesta' lo asigna el sistema automáticamente "
-                "tras 21 días sin novedades; no se puede fijar a mano."
-            )
+    def cadena_vacia_a_none(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
         return v
 
     @model_validator(mode="after")
-    def fechas_y_estado_coherentes(self):
-        if self.status != Estado.GUARDADA and self.applied_date is None:
-            raise ValueError("Si el estado no es 'Guardada' hace falta indicar 'applied_date'.")
-        if self.applied_date and self.applied_date < self.found_date:
-            raise ValueError("'applied_date' no puede ser anterior a 'found_date'.")
+    def fechas_coherentes(self):
+        # Fecha automática: si no se indica nada, hoy.
+        if self.found_date is None:
+            self.found_date = self.applied_date or date.today()
+
+        # Captura rápida: toda candidatura nueva cuenta como enviada; la
+        # fecha de candidatura se rellena sola.
+        if self.applied_date is None:
+            self.applied_date = self.found_date
+
+        # Registro retroactivo ("ayer"): no tiene sentido que la fecha de
+        # candidatura sea anterior a la de hallazgo; la ajustamos.
+        if self.found_date and self.applied_date and self.applied_date < self.found_date:
+            self.found_date = self.applied_date
+
         if self.response_date and self.applied_date and self.response_date < self.applied_date:
             raise ValueError("'response_date' no puede ser anterior a 'applied_date'.")
         return self
 
 
 class ApplicationCreate(ApplicationBase):
-    pass
+    """Todo opcional salvo empresa, puesto y estatus (con default)."""
 
 
 class ApplicationUpdate(BaseModel):
-    """Todos los campos opcionales: es un PATCH parcial.
-    La coherencia final se revalida en crud.update_application,
-    fusionando esto con el registro existente."""
+    """PATCH parcial: cualquier campo puede venir o no."""
+
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    company: Optional[str] = None
-    position: Optional[str] = None
+    company: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    position: Optional[str] = Field(default=None, min_length=1, max_length=200)
     url: Optional[str] = None
     source: Optional[Fuente] = None
     found_date: Optional[date] = None
@@ -139,22 +204,23 @@ class ApplicationUpdate(BaseModel):
     job_type: Optional[TipoPuesto] = None
     cv_version: Optional[VersionCV] = None
     status: Optional[Estado] = None
+    follow_up_date: Optional[date] = None
     response_date: Optional[date] = None
     notes: Optional[str] = None
 
     @field_validator("url", "location", "notes", mode="before")
     @classmethod
-    def sanitize_optional_strings(cls, v):
+    def sanitizar_textos_opcionales(cls, v):
         if isinstance(v, str):
-            cleaned = v.strip()
-            return cleaned if cleaned else None
+            limpio = v.strip()
+            return limpio or None
         return v
 
-    @field_validator("status")
+    @field_validator("source", "modality", "job_type", "cv_version", mode="before")
     @classmethod
-    def status_no_manual_sin_respuesta(cls, v: Optional[Estado]) -> Optional[Estado]:
-        if v is not None and v not in ESTADOS_EDITABLES_MANUALMENTE:
-            raise ValueError("El estado 'Sin respuesta' lo asigna el sistema, no se puede fijar a mano.")
+    def cadena_vacia_a_none(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
         return v
 
 
@@ -164,3 +230,34 @@ class ApplicationOut(ApplicationBase):
     id: int
     max_stage_reached: int
     last_update: datetime
+
+
+class ApplicationRestore(ApplicationBase):
+    """Payload que devuelve DELETE y que permite deshacer el borrado."""
+
+    id: Optional[int] = None
+    max_stage_reached: Optional[int] = None
+
+
+class AttentionOut(ApplicationOut):
+    days_waiting: int
+
+
+class DuplicateMatch(BaseModel):
+    id: int
+    company: str
+    position: str
+    status: str
+    applied_date: Optional[date] = None
+    days_ago: int
+
+
+class DuplicateCheck(BaseModel):
+    duplicate: bool
+    message: Optional[str] = None
+    matches: list[DuplicateMatch] = Field(default_factory=list)
+
+
+class Suggestions(BaseModel):
+    companies: list[str] = Field(default_factory=list)
+    positions: list[str] = Field(default_factory=list)

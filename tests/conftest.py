@@ -1,3 +1,11 @@
+import os
+import tempfile
+
+# La app se importa más abajo: fijamos rutas de test ANTES para no tocar
+# la base de datos real del usuario.
+os.environ.setdefault("JOBTRACKER_DATA_DIR", tempfile.mkdtemp(prefix="jobtracker-tests-"))
+os.environ["DATABASE_URL"] = "sqlite://"
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
